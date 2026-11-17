@@ -5,7 +5,7 @@
 
 import marimo
 
-__generated_with = "0.24.0"
+__generated_with = "0.25.2"
 app = marimo.App(width="full")
 
 
@@ -84,7 +84,7 @@ def _(np):
             "W2":W2,
             "b2":b2
         }
-    
+
         return parameters
 
     def forward_propagation(X, parameters):
@@ -106,7 +106,7 @@ def _(np):
             "Z2":Z2,
             "A2":A2
         }
-    
+
         return A2, cache
 
     def nn_model(X, Y, n_h, num_iterations, learning_rate):
@@ -306,6 +306,12 @@ def _(mo):
 
 @app.cell
 def _():
+    return
+
+
+@app.cell
+def _():
+    print("✅ Celda de prueba: interacción con marimo confirmada.")
     return
 
 

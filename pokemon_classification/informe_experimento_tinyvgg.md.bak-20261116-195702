@@ -1,0 +1,84 @@
+# Informe del experimento de clasificación de imágenes Pokémon
+
+**Nombre:** Héctor Gabriel Sánchez Pérez  
+**Materia:** Tópicos Selectos de Bases de Datos II  
+**Fecha:** 16 de noviembre de 2026
+
+## Experimento: clasificación de Pokémon con una red convolucional TinyVGG
+
+### Objetivo
+
+Entrenar una red neuronal convolucional para clasificar imágenes en 150 categorías de Pokémon. El notebook está escrito en Python y utiliza PyTorch y Torchvision para cargar las imágenes, preparar los datos, entrenar la red y evaluar su desempeño.
+
+### Datos e imágenes utilizadas
+
+Las imágenes están organizadas por carpetas: cada subcarpeta representa una clase Pokémon. El notebook carga los archivos mediante `torchvision.datasets.ImageFolder`, que reconoce extensiones de imagen compatibles. El conjunto contiene imágenes de Pokémon en color; las imágenes admitidas por el cargador son principalmente **JPG**, con algunas **JPEG** y **PNG**. Antes de entrar al modelo, se convierten a tensores RGB, se redimensionan a **64 × 64 píxeles** y se normalizan. Durante el entrenamiento también se aplican volteos horizontales y rotaciones aleatorias de hasta 25 grados.
+
+Conteo de archivos de imagen admitidos por `ImageFolder`:
+
+| Conjunto | Imágenes | Clases |
+|---|---:|---:|
+| Entrenamiento (`data/train`) | 6,820 | 150 |
+| Prueba (`data/test`) | 2,242 | 150 |
+| **Total** | **9,062** | **150** |
+
+La cantidad por clase no es exactamente uniforme: en entrenamiento hay entre 26 y 66 imágenes por clase; en prueba, entre 13 y 15. Estos conteos corresponden a los archivos que `ImageFolder` reconoce y carga, no necesariamente a todos los archivos que pudiera haber en las carpetas.
+
+### Entorno de ejecución
+
+El experimento se ejecutó en un notebook de **Molab/Marimo** porque el entorno proporciona acceso a una GPU **NVIDIA RTX PRO 6000 Blackwell Server Edition**. PyTorch detectó CUDA disponible y seleccionó `cuda` como dispositivo de cómputo. La versión CUDA reportada por el entorno fue 13.0.
+
+El entrenamiento de las 10 épocas tardó aproximadamente **23 minutos y 45 segundos** (alrededor de 2 minutos y 23 segundos por época). Con una laptop personal sin una GPU comparable, no se habría esperado completar el notebook en ese mismo tiempo; esta es una estimación basada en el hardware utilizado y no una medición de rendimiento hecha en la laptop.
+
+### Estructura del código
+
+El notebook se organiza en bloques:
+
+1. **Importaciones:** carga PyTorch, Torchvision, `DataLoader`, herramientas de progreso y utilidades de rutas y tipos.
+2. **Flujo principal (`main`):** define 10 épocas, lotes de 32 imágenes, 64 unidades ocultas y una tasa de aprendizaje de 0.001. Selecciona el dispositivo, aplica las transformaciones, prepara los datos, instancia el modelo, configura la función de pérdida y el optimizador Adam, inicia el entrenamiento y guarda los pesos.
+3. **Carga de datos (`create_dataloaders`):** utiliza `ImageFolder` para asociar cada carpeta con una clase y `DataLoader` para entregar los ejemplos en lotes. El conjunto de entrenamiento se mezcla; el de prueba no.
+4. **Entrenamiento y evaluación:** `train_step` calcula predicciones y pérdida, retropropaga el error y actualiza los pesos. `test_step` calcula pérdida y exactitud sobre los datos de prueba sin actualizar los pesos. `train` repite estos pasos en cada época y registra las métricas.
+5. **Modelo (`TinyVGG`):** define la arquitectura de la red convolucional.
+6. **Guardado (`save_model`):** crea la carpeta de destino y almacena los parámetros entrenados.
+7. **Ejecución:** la llamada a `main()` ejecuta el flujo completo.
+
+### Características de TinyVGG
+
+TinyVGG es una red convolucional compacta, inspirada en una arquitectura didáctica para clasificación de imágenes. Recibe imágenes RGB de 64 × 64 y cuenta con dos bloques convolucionales; cada bloque contiene dos capas de convolución con 64 filtros, activaciones ReLU y una operación de max pooling. Al final, aplana las características y las pasa a una capa lineal que produce 150 puntuaciones, una por clase Pokémon.
+
+La arquitectura tiene aproximadamente **1.74 millones de parámetros entrenables**. La función de pérdida es `CrossEntropyLoss`, apropiada para clasificación multiclase, y Adam ajusta los parámetros durante el entrenamiento.
+
+### Resultados del entrenamiento
+
+Cada línea del output contiene:
+
+- **`Epoch`**: número de la época (una pasada completa por los datos de entrenamiento).
+- **`train_loss` / `test_loss`**: pérdida en entrenamiento y prueba; en general, valores menores indican predicciones más cercanas a las etiquetas.
+- **`train_acc` / `test_acc`**: exactitud en entrenamiento y prueba, expresada como proporción entre 0 y 1. Por ejemplo, `0.8235` equivale a 82.35 %.
+
+| Época | Pérdida train | Exactitud train | Pérdida test | Exactitud test |
+|---:|---:|---:|---:|---:|
+| 1 | 3.9559 | 13.39 % | 2.8740 | 31.07 % |
+| 2 | 2.5494 | 37.19 % | 2.1945 | 43.13 % |
+| 3 | 1.9876 | 49.39 % | 1.6820 | 55.41 % |
+| 4 | 1.6715 | 57.08 % | 1.4702 | 60.30 % |
+| 5 | 1.3994 | 63.19 % | 1.1055 | 69.50 % |
+| 6 | 1.2120 | 67.26 % | 1.0805 | 70.55 % |
+| 7 | 1.0775 | 71.16 % | 0.9096 | 76.63 % |
+| 8 | 0.9694 | 73.29 % | 0.7953 | 77.55 % |
+| 9 | 0.8288 | 76.93 % | 0.7622 | 79.23 % |
+| 10 | 0.7644 | 78.72 % | 0.6252 | 82.35 % |
+
+En general, la pérdida disminuyó y la exactitud aumentó a lo largo de las épocas. En el conjunto de prueba, la exactitud pasó de **31.07 %** a **82.35 %**, mientras que la pérdida bajó de **2.8740** a **0.6252**. Esto indica una mejora en la clasificación de imágenes que no se usan para actualizar los pesos. Es un resultado de evaluación prometedor, aunque no garantiza el mismo desempeño en imágenes externas o distintas a las del conjunto utilizado.
+
+### Modelo guardado y posibles usos
+
+El notebook guarda el `state_dict` —los pesos aprendidos, no la definición completa de la arquitectura— en:
+
+```text
+models/pokemon_tinyvgg_v0.pth
+```
+
+En la sesión de Molab, esta ruta relativa corresponde a `/marimo/models/pokemon_tinyvgg_v0.pth`. Para reutilizar el modelo, se debe reconstruir la arquitectura TinyVGG con las mismas dimensiones (3 canales de entrada, 64 unidades ocultas y 150 clases) y cargar ese `state_dict`. El archivo se encuentra en el entorno de ejecución de Molab; para conservarlo fuera de la sesión, habría que descargarlo o copiarlo a un almacenamiento persistente.
+
+El modelo puede servir como prototipo para clasificar imágenes de Pokémon en esas 150 categorías, experimentar con redes convolucionales y comparar técnicas de entrenamiento. Su uso es específico del conjunto y las clases con que se entrenó: no debe considerarse un clasificador general de objetos ni se garantiza su precisión ante imágenes muy diferentes.
